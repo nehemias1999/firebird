@@ -1,0 +1,1026 @@
+
+/*
+ *
+
+        1. Cada vez que se vende un producto, se descuenta su cantidad de stock (cada vez que deja de
+    vender un producto, sume su cantidad al stock). Un producto no puede venderse si el stock no es
+    suficiente.
+
+        2. El importe de la factura es igual a la sumatoria de cantidad * precio; actualice el importe de la factura
+    a medida que vende o deja de vender productos.
+
+        3. Un producto no puede venderse a un precio por debajo de su precio base.
+
+        4. El estado de una factura comienza con estado 0 (iniciada).
+    De estado 0 iniciada, puede pasar a estado 1 finalizada.
+    De estado 0 iniciada, puede pasar a estado 2 anulada.
+    De estado 1 finalizada, puede pasar a estado 2 anulada, pero no puede volver a estado 0 iniciada De
+    estado 2 anulada, puede pasar a estado 1 finalizada, pero no puede volver a estado 0 iniciada.
+    Si una factura pasa de estado 1 finalizada a estado 2 anulada, se debe devolver toda la cantidad de
+    producto al stock.
+    Si una factura estaba en estado 2 anulada y pasa a estado 1 finalizada, se debe restar toda la cantidad
+    de producto del stock.
+
+        5. Implemente, de forma genérica, para todas las facturas, el siguiente control: por ejemplo, si la factura
+    100 tiene fecha 02-SEP-14, entonces, la factura 101 deberá tener una fecha mayor igual al 02-SEP-14 y
+    nunca menor.
+
+    Resuelva las siguientes consultas utilizando SELECT PROCEDURES:
+
+        1. Obtenga los datos de las facturas a través de un select procedure que posee 2 parámetros de
+    entrada: importe desde e importe hasta; los cuales indican el rango de importes a seleccionar de la tabla
+    de factura.
+
+        2. Modifique el select procedure anterior para que:
+    - en caso de no indicar ningún valor desde se asuma el más pequeño.
+    - en caso de no indicar ningún valor hasta se asuma el más alto.
+
+        3. Se indican 2 parámetros de entrada: número de factura desde y número de factura hasta (ambos
+    inclusive); se pretende listar los datos de todos los productos, indicando el total facturado en $ y en
+    cantidad; de todos los productos facturados en facturas cuyo número sea mayor igual al número de
+    factura desde y menor o igual al número de factura hasta.
+
+        4. Se desea imprimir la tabla de productos con los siguientes datos: ID, DESCR, STOCK y se desea
+    agregar 3 columnas más: FACTURA1, FACTURA2, FACTURA3 en donde se indiquen los números (si
+    es que existen) de las 3 ultimás facturas en donde fue vendido dicho producto. Se asume que las
+    facturas con números más altos, son las facturas más recientes.
+
+        5.Se desea confeccionar una siguiente consulta cuyas columás son:
+    FAC100,FAC1000,FAC10000,FAC100000 en donde en la primer columna se almacenan la cantidad de
+    facturas con importes menores o iguales a $ 100, en la segunda la cantidad de facturas con importes
+    menores o iguales a $ 1000 y mayores a $ 100 y así sucesivamente.
+
+        6. Se desean imprimir los datos de las facturas en las cuales el segundo producto facturado tenga un
+    stock actual de menos de 1000 unidades. Se asume que el orden de los productos facturados de cada
+    factura, van desde los ID's de productos más pequeños hacia los más grandes.
+    Sugerencia: hacer primero un select procedure que enumere los productos facturados en cada factura y
+    luego otro select procedure que use al anterior para resolver el problema.
+
+        7. Implemente un select procedure que reciba como argumento de entrada un número entero que
+    representa un año (ejemplo: 2016) y devuelve las siguientes columnas: MES01, MES02, ... MES12 que
+    contienen el total de ventas (sumatoria de FACTURA.IMPORTE) de cada mes, para el año indicado
+    como argumento de entrada.
+    Sugerencia: puede utilizar la función EXTRACT() de la siguiente forma, para obtener el mes de una
+    fecha, de todas las facturas del año 2016 (observe que pasa cuando sumamos 1 a una fecha):
+    SELECT FECHA,EXTRACT(MONTH FROM FECHA) AS MES,FECHA+1 AS
+    FECHA2 FROM FACTURA WHERE EXTRACT(YEAR FROM FECHA) = 2016
+    Lea [2] para ver otras opciones o consulte el Language Reference Update 2.1, función extract().
+
+    Resuelva los siguientes procesos utilizando EXECUTE PROCEDURES:
+
+        1. Borre todas las facturas que están anuladas a partir de una fecha desde y hasta que se indican como
+    argumentos de entrada del procedimiento. No hay argumentos de salida.
+
+        2. Implemente un stored procedure que permite hacer altas bajas o modificaciones sobre la tabla
+    producto, los argumentos de entrada son: ACCION ('A' es alta, 'B' es baja, 'C' es cambio),
+    ID,DESCR,STOCK se supone que no hay cambios sobre la clave primaria. El procedimiento tiene un
+    parámetro de salida, de tipo integer el cual devuelve 0 cuando no hay ningún error y en caso de algún
+    error devuelve SQLSTATE. Este procedimiento nunca generaría ninguna excepción, no debería dar
+    error nunca, solo habría que chequear su retorno para determinar si la acción fue satisfactoria o no.
+    Sugerencia: hacer otro stored procedure que llame a éste para comprobar los valores devueltos o
+    insertarlo en una tabla temporaria y asegurarse de que funciona correctamente.
+
+        3. Implemente un stored procedure para generar tuplas en la tabla FACTURA, los argumentos de
+    entrada son: CANTIDAD, FECHA_DESDE. CANTIDAD se refiere a la cantidad de tuplas a insertar,
+    FECHA_DESDE es la fecha de la primer factura a insertar, a partir de la segunda en adelante, se suma
+    1 a FECHA_DESDE para obtener el día siguiente. Asumir ESTADO = 0 (iniciada), IMPORTE = 0.
+    Ignorar todo error que pueda suceder durante el proceso. El procedimiento no debería lanzar ninguna
+    excepción ni dar error. El procedimiento no tiene ningún argumento de salida.
+ *
+*/
+
+/********************* ROLES **********************/
+
+/********************* UDFS ***********************/
+
+/********************* FUNCTIONS ***********************/
+
+/****************** SEQUENCES ********************/
+
+/******************** DOMAINS *********************/
+
+/******************* PROCEDURES ******************/
+
+SET TERM ^ ;
+CREATE PROCEDURE P1_PRO_EXEC_BORRAR_FACTURAS (
+    FECHA_DESDE TYPE OF COLUMN TBL_FACTURAS.FECHA,
+    FECHA_HASTA TYPE OF COLUMN TBL_FACTURAS.FECHA )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE P2_PRO_EXEC_ABM_PRODUCTOS (
+    ACCION char(1),
+    ID TYPE OF COLUMN TBL_PRODUCTOS.ID,
+    DESCRIPCION TYPE OF COLUMN TBL_PRODUCTOS.DESCRIPCION,
+    STOCK TYPE OF COLUMN TBL_PRODUCTOS.STOCK )
+RETURNS (
+    CODIGO_DE_ESTADO integer )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE P2_PRO_SEL_OBTENER_IMPORTES (
+    IMPORTE_DESDE TYPE OF COLUMN TBL_FACTURAS.IMPORTE DEFAULT NULL,
+    IMPORTE_HASTA TYPE OF COLUMN TBL_FACTURAS.IMPORTE DEFAULT NULL )
+RETURNS (
+    NUMERO TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    IMPORTE TYPE OF COLUMN TBL_FACTURAS.IMPORTE,
+    ESTADO TYPE OF COLUMN TBL_FACTURAS.ESTADO,
+    FECHA TYPE OF COLUMN TBL_FACTURAS.FECHA )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE P3_PRO_EXEC_INSERT_FACTURAS (
+    CANTIDAD integer,
+    FECHA_DESDE date )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE P3_PRO_SEL_PRODUCTOS_FACTURAS (
+    NUMERO_DESDE TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    NUMERO_HASTA TYPE OF COLUMN TBL_FACTURAS.NUMERO )
+RETURNS (
+    ID TYPE OF COLUMN TBL_PRODUCTOS.ID,
+    TOTAL_FACTURADO numeric(10,2),
+    TOTAL_CANTIDAD integer )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE P4_PRO_SEL_ULTIMAS_FACTURAS
+RETURNS (
+    ID TYPE OF COLUMN TBL_PRODUCTOS.ID,
+    DESCRIPCION TYPE OF COLUMN TBL_PRODUCTOS.DESCRIPCION,
+    STOCK TYPE OF COLUMN TBL_PRODUCTOS.STOCK,
+    FACTURA1 TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    FACTURA2 TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    FACTURA3 TYPE OF COLUMN TBL_FACTURAS.NUMERO )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE P5_PRO_SEL_RANGO_IMPORTE
+RETURNS (
+    FAC100 integer,
+    FAC1000 integer,
+    FAC10000 integer,
+    FAC100000 integer )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE P6_PRO_SEL_OBTENER_FACTURAS
+RETURNS (
+    NUMERO TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    IMPORTE TYPE OF COLUMN TBL_FACTURAS.IMPORTE,
+    ESTADO TYPE OF COLUMN TBL_FACTURAS.ESTADO,
+    FECHA TYPE OF COLUMN TBL_FACTURAS.FECHA )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE P7_PRO_SEL_CANTIDAD_FACTURAS (
+    ANIO_SELECCIONADO integer )
+RETURNS (
+    MES01 integer,
+    MES02 integer,
+    MES03 integer,
+    MES04 integer,
+    MES05 integer,
+    MES06 integer,
+    MES07 integer,
+    MES08 integer,
+    MES09 integer,
+    MES10 integer,
+    MES11 integer,
+    MES12 integer )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+SET TERM ^ ;
+CREATE PROCEDURE PRO_SEL_PRODUCTOS_FACTURAS
+RETURNS (
+    NUMERO TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    IMPORTE TYPE OF COLUMN TBL_FACTURAS.IMPORTE,
+    ESTADO TYPE OF COLUMN TBL_FACTURAS.ESTADO,
+    FECHA TYPE OF COLUMN TBL_FACTURAS.FECHA,
+    ID TYPE OF COLUMN TBL_DETALLES.ID )
+
+AS 
+BEGIN SUSPEND; 
+END^
+SET TERM ; ^
+
+/******************* PACKAGES ******************/
+
+/******************** TABLES **********************/
+
+CREATE TABLE TBL_DETALLES
+(
+  NUMERO integer NOT NULL,
+  ID integer NOT NULL,
+  CANTIDAD integer DEFAULT 0 NOT NULL,
+  PRECIO numeric(10,2) DEFAULT 0 NOT NULL,
+  CONSTRAINT PK_DETALLES PRIMARY KEY (NUMERO,ID)
+);
+CREATE TABLE TBL_FACTURAS
+(
+  NUMERO integer NOT NULL,
+  IMPORTE numeric(10,2) DEFAULT 0 NOT NULL,
+  ESTADO smallint DEFAULT 0 NOT NULL,
+  FECHA date DEFAULT CURRENT_DATE NOT NULL,
+  CONSTRAINT PK_FACTURAS PRIMARY KEY (NUMERO)
+);
+CREATE TABLE TBL_FECHA_FACTURA
+(
+  ID integer DEFAULT 1 NOT NULL,
+  ULTIMA_FECHA date
+);
+CREATE TABLE TBL_PRODUCTOS
+(
+  ID integer NOT NULL,
+  DESCRIPCION varchar(100) NOT NULL,
+  STOCK integer DEFAULT 0 NOT NULL,
+  PRECIO_BASE numeric(10,2) DEFAULT 0 NOT NULL,
+  PRECIO_COSTO numeric(10,2) DEFAULT 0 NOT NULL,
+  CONSTRAINT PK_PRODUCTOS PRIMARY KEY (ID)
+);
+/********************* VIEWS **********************/
+
+/******************* EXCEPTIONS *******************/
+
+CREATE EXCEPTION EX_CAMBIO_A_ESTADO_INICIADO
+'No se permite el cambio del estado finalizado (1) o el estado anulado (2) al estado iniciado (0)! ';
+CREATE EXCEPTION EX_ERROR_CAMBIO_ID
+'No se permite el cambio de el id de el producto!';
+CREATE EXCEPTION EX_ERROR_CAMBIO_NUMERO
+'No se permite el cambio de el numero de factura!';
+CREATE EXCEPTION EX_ERROR_FACTURA_ANULADA
+'La factura se encuentra anulada!';
+CREATE EXCEPTION EX_ERROR_FACTURA_FINALIZADA
+'La factura se encuentra finalizada!';
+CREATE EXCEPTION EX_ERROR_MENOR_A_PRECIO_BASE
+'El valor de el precio debe ser igual o mayor al precio base!';
+CREATE EXCEPTION EX_ERROR_STOCK_INSUFICIENTE
+'  El stock del producto es insuficiente!';
+CREATE EXCEPTION EX_ERROR_VALORES_INGRESADOS
+'El/los valores ingresados son incorrectos!';
+CREATE EXCEPTION EX_FECHA_MENOR_A_LA_ESPERADA
+'La fecha ingresada a la factura debe ser del mismo dia o de los dias siguientes que la ultima factura ingresada!';
+CREATE EXCEPTION EX_NO_HAY_STOCK_SUFICIENTE
+'El stock es menor al requerido!';
+/******************** TRIGGERS ********************/
+
+SET TERM ^ ;
+CREATE TRIGGER TRG_ADDETALLES FOR TBL_DETALLES ACTIVE
+AFTER delete POSITION 0
+
+AS 
+BEGIN 
+        
+    UPDATE TBL_FACTURAS SET 
+        IMPORTE = IMPORTE - (OLD.CANTIDAD * OLD.PRECIO)
+    WHERE NUMERO = OLD.NUMERO;
+    
+END
+^
+SET TERM ; ^
+SET TERM ^ ;
+CREATE TRIGGER TRG_AIDETALLES FOR TBL_DETALLES ACTIVE
+AFTER insert POSITION 0
+
+AS 
+BEGIN 
+    
+    UPDATE TBL_FACTURAS SET 
+        IMPORTE = IMPORTE + (NEW.CANTIDAD * NEW.PRECIO)
+    WHERE NUMERO = NEW.NUMERO;
+     
+END
+^
+SET TERM ; ^
+SET TERM ^ ;
+CREATE TRIGGER TRG_AIFACTURAS FOR TBL_FACTURAS ACTIVE
+AFTER insert POSITION 0
+
+AS 
+BEGIN 
+    
+    
+    
+    IF ((SELECT ULTIMA_FECHA FROM TBL_FECHA_FACTURA) IS NULL) THEN
+        INSERT INTO TBL_FECHA_FACTURA (ID, ULTIMA_FECHA) VALUES (
+            1,
+            NEW.FECHA
+        );
+    ELSE 
+        UPDATE TBL_FECHA_FACTURA SET 
+            ULTIMA_FECHA = NEW.FECHA
+        WHERE ID = 1;
+    
+END
+^
+SET TERM ; ^
+SET TERM ^ ;
+CREATE TRIGGER TRG_AUDETALLES FOR TBL_DETALLES ACTIVE
+AFTER update POSITION 0
+
+AS 
+BEGIN 
+    
+    IF ((OLD.CANTIDAD <> NEW.CANTIDAD) 
+         OR 
+         (OLD.PRECIO <> NEW.PRECIO)) THEN 
+        UPDATE TBL_FACTURAS SET 
+            IMPORTE = IMPORTE - (OLD.CANTIDAD * OLD.PRECIO) + (NEW.CANTIDAD * NEW.PRECIO)
+        WHERE NUMERO = NEW.NUMERO;
+    
+END
+^
+SET TERM ; ^
+SET TERM ^ ;
+CREATE TRIGGER TRG_AUFACTURAS FOR TBL_FACTURAS ACTIVE
+AFTER update POSITION 0
+
+AS 
+    DECLARE VARIABLE VNUMERO TYPE OF COLUMN TBL_DETALLES.NUMERO;
+    DECLARE VARIABLE VID TYPE OF COLUMN TBL_DETALLES.ID;
+    DECLARE VARIABLE VCANTIDAD TYPE OF COLUMN TBL_DETALLES.CANTIDAD;
+    DECLARE VARIABLE VPRECIO TYPE OF COLUMN TBL_DETALLES.PRECIO;
+BEGIN 
+    
+    IF (((OLD.ESTADO = 0) AND (NEW.ESTADO = 1)) 
+        OR 
+        ((OLD.ESTADO = 2) AND (NEW.ESTADO = 1))) THEN
+        FOR SELECT ID, CANTIDAD 
+        FROM TBL_DETALLES WHERE NUMERO = NEW.NUMERO 
+        INTO :VID, :VCANTIDAD DO BEGIN  
+            UPDATE TBL_PRODUCTOS SET
+                STOCK = STOCK - :VCANTIDAD
+            WHERE ID = :VID;
+        END
+        
+    IF ((OLD.ESTADO = 1) AND (NEW.ESTADO = 2)) THEN
+        FOR SELECT ID, CANTIDAD 
+        FROM TBL_DETALLES WHERE NUMERO = NEW.NUMERO 
+        INTO :VID, :VCANTIDAD DO BEGIN  
+            UPDATE TBL_PRODUCTOS SET
+                STOCK = STOCK + :VCANTIDAD
+            WHERE ID = :VID;
+        END
+     
+END
+^
+SET TERM ; ^
+SET TERM ^ ;
+CREATE TRIGGER TRG_BIDETALLES FOR TBL_DETALLES ACTIVE
+BEFORE insert POSITION 0
+
+AS 
+    DECLARE VARIABLE VESTADO_FACTURA TYPE OF COLUMN TBL_FACTURAS.ESTADO;
+BEGIN
+
+    :VESTADO_FACTURA = (SELECT ESTADO FROM TBL_FACTURAS 
+                        WHERE NUMERO = NEW.NUMERO);
+
+    IF (:VESTADO_FACTURA = 1) THEN 
+        EXCEPTION EX_ERROR_FACTURA_FINALIZADA;
+
+    IF (:VESTADO_FACTURA = 2) THEN 
+        EXCEPTION EX_ERROR_FACTURA_ANULADA;
+
+    IF (NEW.CANTIDAD < 1) THEN 
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS;
+    
+    IF (NEW.CANTIDAD > (SELECT STOCK FROM TBL_PRODUCTOS
+                        WHERE ID = NEW.ID)) THEN
+        EXCEPTION EX_ERROR_STOCK_INSUFICIENTE;
+        
+    IF (NEW.PRECIO < (SELECT PRECIO_BASE FROM TBL_PRODUCTOS
+                      WHERE ID = NEW.ID)) THEN 
+        EXCEPTION EX_ERROR_MENOR_A_PRECIO_BASE;
+     
+END
+^
+SET TERM ; ^
+SET TERM ^ ;
+CREATE TRIGGER TRG_BIFACTURAS FOR TBL_FACTURAS ACTIVE
+BEFORE insert POSITION 0
+
+AS 
+    DECLARE VARIABLE VULTIMA_FECHA DATE;
+BEGIN 
+        
+    NEW.IMPORTE = 0;
+    
+    NEW.ESTADO = 0;
+    
+    :VULTIMA_FECHA = (SELECT ULTIMA_FECHA FROM TBL_FECHA_FACTURA);
+
+    IF ((:VULTIMA_FECHA IS NOT NULL)
+        AND
+        (NEW.FECHA < :VULTIMA_FECHA)) THEN
+            EXCEPTION EX_FECHA_MENOR_A_LA_ESPERADA;
+                    
+END
+^
+SET TERM ; ^
+SET TERM ^ ;
+CREATE TRIGGER TRG_BUDETALLES FOR TBL_DETALLES ACTIVE
+BEFORE update POSITION 0
+
+AS 
+    DECLARE VARIABLE VESTADO_FACTURA TYPE OF COLUMN TBL_FACTURAS.ESTADO;
+BEGIN
+
+    :VESTADO_FACTURA = (SELECT ESTADO FROM TBL_FACTURAS 
+                        WHERE NUMERO = OLD.NUMERO);
+
+    IF (:VESTADO_FACTURA = 1) THEN 
+        EXCEPTION EX_ERROR_FACTURA_FINALIZADA;
+
+    IF (:VESTADO_FACTURA = 2) THEN 
+        EXCEPTION EX_ERROR_FACTURA_ANULADA;
+
+    IF (NEW.NUMERO <> OLD.NUMERO) THEN
+        EXCEPTION EX_ERROR_CAMBIO_NUMERO;
+        
+    IF (NEW.ID <> OLD.ID) THEN
+        EXCEPTION EX_ERROR_CAMBIO_ID;
+
+    IF ((NEW.CANTIDAD <> OLD.CANTIDAD) 
+        AND 
+        (NEW.CANTIDAD > (SELECT STOCK FROM TBL_PRODUCTOS
+                         WHERE ID = NEW.ID))) THEN
+        EXCEPTION EX_ERROR_STOCK_INSUFICIENTE;
+                
+    IF (NEW.PRECIO < (SELECT PRECIO_BASE FROM TBL_PRODUCTOS
+                      WHERE ID = NEW.ID)) THEN 
+        EXCEPTION EX_ERROR_MENOR_A_PRECIO_BASE;
+
+END
+^
+SET TERM ; ^
+SET TERM ^ ;
+CREATE TRIGGER TRG_BUFACTURAS FOR TBL_FACTURAS ACTIVE
+BEFORE update POSITION 0
+
+AS 
+    DECLARE VARIABLE VNUMERO TYPE OF COLUMN TBL_DETALLES.NUMERO;
+    DECLARE VARIABLE VID TYPE OF COLUMN TBL_DETALLES.ID;
+    DECLARE VARIABLE VCANTIDAD TYPE OF COLUMN TBL_DETALLES.CANTIDAD;
+    DECLARE VARIABLE VPRECIO TYPE OF COLUMN TBL_DETALLES.PRECIO;
+BEGIN 
+    
+    IF (((OLD.ESTADO = 1) OR (OLD.ESTADO = 2)) 
+        AND 
+        (NEW.ESTADO = 0)) THEN
+        EXCEPTION EX_CAMBIO_A_ESTADO_INICIADO;
+            
+    IF (((OLD.ESTADO = 0) AND (NEW.ESTADO = 1)) 
+        OR 
+        ((OLD.ESTADO = 2) AND (NEW.ESTADO = 1))) THEN
+        FOR SELECT NUMERO, ID, CANTIDAD, PRECIO 
+        FROM TBL_DETALLES WHERE NUMERO = NEW.NUMERO 
+        INTO :VNUMERO, :VID, :VCANTIDAD, :VPRECIO DO BEGIN  
+            IF ((SELECT STOCK FROM TBL_PRODUCTOS 
+                 WHERE ID = :VID) < :VCANTIDAD) THEN 
+                 EXCEPTION EX_ERROR_STOCK_INSUFICIENTE 'El stock del producto con id: '|| :VID ||' es insuficiente!';
+        END
+     
+    IF (NEW.NUMERO <> OLD.NUMERO) THEN
+        EXCEPTION EX_ERROR_CAMBIO_NUMERO;
+    
+    NEW.FECHA = OLD.FECHA;
+     
+END
+^
+SET TERM ; ^
+/******************** DB TRIGGERS ********************/
+
+/******************** DDL TRIGGERS ********************/
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P1_PRO_EXEC_BORRAR_FACTURAS (
+    FECHA_DESDE TYPE OF COLUMN TBL_FACTURAS.FECHA,
+    FECHA_HASTA TYPE OF COLUMN TBL_FACTURAS.FECHA )
+
+
+AS
+BEGIN
+  
+    IF (:FECHA_DESDE > :FECHA_HASTA) THEN 
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS 'El valor de "FECHA_DESDE" debe ser menor o igual al valor de "FECHA_HASTA"!';
+  
+    DELETE FROM TBL_FACTURAS
+    WHERE FECHA BETWEEN :FECHA_DESDE AND :FECHA_HASTA
+    AND ESTADO = 2;
+     
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P2_PRO_EXEC_ABM_PRODUCTOS (
+    ACCION char(1),
+    ID TYPE OF COLUMN TBL_PRODUCTOS.ID,
+    DESCRIPCION TYPE OF COLUMN TBL_PRODUCTOS.DESCRIPCION,
+    STOCK TYPE OF COLUMN TBL_PRODUCTOS.STOCK )
+RETURNS (
+    CODIGO_DE_ESTADO integer )
+
+
+AS
+BEGIN
+  
+    CODIGO_DE_ESTADO = 0;
+  
+    IF (:ACCION = 'A') THEN 
+        INSERT INTO TBL_PRODUCTOS (ID, DESCRIPCION, STOCK) VALUES (
+            :ID,
+            :DESCRIPCION,
+            :STOCK
+        );
+    ELSE
+        
+    IF (:ACCION = 'B') THEN 
+        DELETE FROM TBL_PRODUCTOS
+        WHERE ID = :ID;
+    ELSE
+        
+    IF (:ACCION = 'C') THEN
+        UPDATE TBL_PRODUCTOS SET 
+            DESCRIPCION = :DESCRIPCION,
+            STOCK = :STOCK
+        WHERE ID = :ID;
+        
+    WHEN ANY DO
+        CODIGO_DE_ESTADO = SQLSTATE;
+  
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P2_PRO_SEL_OBTENER_IMPORTES (
+    IMPORTE_DESDE TYPE OF COLUMN TBL_FACTURAS.IMPORTE DEFAULT NULL,
+    IMPORTE_HASTA TYPE OF COLUMN TBL_FACTURAS.IMPORTE DEFAULT NULL )
+RETURNS (
+    NUMERO TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    IMPORTE TYPE OF COLUMN TBL_FACTURAS.IMPORTE,
+    ESTADO TYPE OF COLUMN TBL_FACTURAS.ESTADO,
+    FECHA TYPE OF COLUMN TBL_FACTURAS.FECHA )
+
+
+AS
+BEGIN
+
+    IF (((IMPORTE_DESDE IS NOT NULL) OR (IMPORTE_HASTA IS NOT NULL)) 
+        AND 
+        ((IMPORTE_DESDE < 0) OR (IMPORTE_HASTA < 0))) THEN
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS;
+        
+    IF (((IMPORTE_DESDE IS NOT NULL) AND (IMPORTE_HASTA IS NOT NULL)) 
+        AND 
+        ((IMPORTE_DESDE > IMPORTE_HASTA))) THEN
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS;
+
+    IF (IMPORTE_DESDE IS NULL) THEN
+        IMPORTE_DESDE = (SELECT MIN(IMPORTE) FROM TBL_FACTURAS);
+        
+    IF (IMPORTE_HASTA IS NULL) THEN
+        IMPORTE_HASTA = (SELECT MAX(IMPORTE) FROM TBL_FACTURAS);
+
+    FOR SELECT NUMERO, IMPORTE, ESTADO, FECHA FROM TBL_FACTURAS
+    WHERE IMPORTE BETWEEN :IMPORTE_DESDE AND :IMPORTE_HASTA
+    INTO :NUMERO, :IMPORTE, :ESTADO, :FECHA DO BEGIN
+        SUSPEND;
+    END
+    
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P3_PRO_EXEC_INSERT_FACTURAS (
+    CANTIDAD integer,
+    FECHA_DESDE date )
+
+
+AS
+BEGIN
+  
+    IF (CANTIDAD < 1) THEN 
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS;
+
+    IF ((FECHA_DESDE < 1900) 
+        OR 
+        (FECHA_DESDE > EXTRACT(YEAR FROM CURRENT_DATE))) THEN
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS;
+
+    WHILE (CANTIDAD > 0) DO BEGIN 
+    
+        INSERT INTO TBL_FACTURAS (ESTADO, IMPORTE, FECHA) VALUES
+        (
+            0,
+            0,
+            :FECHA_DESDE
+        );
+        
+        FECHA_DESDE = FECHA_DESDE + 1;
+        CANTIDAD = CANTIDAD - 1;
+    
+    END
+  
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P3_PRO_SEL_PRODUCTOS_FACTURAS (
+    NUMERO_DESDE TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    NUMERO_HASTA TYPE OF COLUMN TBL_FACTURAS.NUMERO )
+RETURNS (
+    ID TYPE OF COLUMN TBL_PRODUCTOS.ID,
+    TOTAL_FACTURADO numeric(10,2),
+    TOTAL_CANTIDAD integer )
+
+
+AS
+DECLARE VARIABLE VSUMA_FACTURADO TYPE OF COLUMN TBL_DETALLES.PRECIO;
+    DECLARE VARIABLE VSUMA_CANTIDAD TYPE OF COLUMN TBL_DETALLES.CANTIDAD;
+BEGIN
+
+    IF ((:NUMERO_DESDE < 1) OR (:NUMERO_HASTA < 1)) THEN 
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS;
+
+    IF (:NUMERO_DESDE > :NUMERO_HASTA) THEN 
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS 'El valor de "NUMERO_DESDE" debe ser menor o igual a el valor de "NUMERO_HASTA"!';
+           
+    FOR SELECT ID, SUM(CANTIDAD * PRECIO), SUM(CANTIDAD)
+    FROM TBL_FACTURAS F
+    INNER JOIN TBL_DETALLES D ON F.NUMERO = D.NUMERO
+    WHERE F.NUMERO BETWEEN :NUMERO_DESDE AND :NUMERO_HASTA
+    GROUP BY ID INTO :ID, :VSUMA_FACTURADO, :VSUMA_CANTIDAD DO BEGIN
+    
+        TOTAL_FACTURADO = :VSUMA_FACTURADO;
+        TOTAL_CANTIDAD =  :VSUMA_CANTIDAD;
+        SUSPEND;
+        
+    END
+    
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P4_PRO_SEL_ULTIMAS_FACTURAS
+RETURNS (
+    ID TYPE OF COLUMN TBL_PRODUCTOS.ID,
+    DESCRIPCION TYPE OF COLUMN TBL_PRODUCTOS.DESCRIPCION,
+    STOCK TYPE OF COLUMN TBL_PRODUCTOS.STOCK,
+    FACTURA1 TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    FACTURA2 TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    FACTURA3 TYPE OF COLUMN TBL_FACTURAS.NUMERO )
+
+
+AS
+DECLARE VARIABLE VID TYPE OF COLUMN TBL_PRODUCTOS.ID; 
+    DECLARE VARIABLE VDESCRIPCION TYPE OF COLUMN TBL_PRODUCTOS.DESCRIPCION; 
+    DECLARE VARIABLE VSTOCK TYPE OF COLUMN TBL_PRODUCTOS.STOCK; 
+    DECLARE VARIABLE VNUMERO TYPE OF COLUMN TBL_FACTURAS.NUMERO;
+BEGIN
+
+    FACTURA1 = NULL;
+    FACTURA2 = NULL;
+    FACTURA3 = NULL;
+ 
+    FOR SELECT ID, DESCRIPCION, STOCK FROM TBL_PRODUCTOS
+    INTO :VID, :VDESCRIPCION, :VSTOCK DO BEGIN 
+        
+        FOR SELECT F.NUMERO
+        FROM TBL_FACTURAS F 
+        INNER JOIN TBL_DETALLES D ON F.NUMERO = D.NUMERO
+        WHERE D.ID = :VID
+        ORDER BY F.NUMERO DESC
+        ROWS 3
+        INTO :VNUMERO
+        DO
+        BEGIN
+        
+            IF (:FACTURA1 IS NULL) THEN 
+                :FACTURA1 = :VNUMERO;
+            ELSE IF (:FACTURA2 IS NULL) THEN 
+                :FACTURA2 = :VNUMERO;
+            ELSE IF (:FACTURA3 IS NULL) THEN 
+                :FACTURA3 = :VNUMERO;
+
+        END
+        
+        ID = :VID;
+        DESCRIPCION = :VDESCRIPCION;
+        STOCK = :VSTOCK;
+    
+        SUSPEND;
+        
+        FACTURA1 = NULL;
+        FACTURA2 = NULL;
+        FACTURA3 = NULL;
+
+    END
+ 
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P5_PRO_SEL_RANGO_IMPORTE
+RETURNS (
+    FAC100 integer,
+    FAC1000 integer,
+    FAC10000 integer,
+    FAC100000 integer )
+
+
+AS
+DECLARE VARIABLE VIMPORTE TYPE OF COLUMN TBL_FACTURAS.IMPORTE;
+BEGIN
+  
+    FAC100 = 0;
+    FAC1000 = 0;
+    FAC10000 = 0;
+    FAC100000 = 0;
+  
+    FOR SELECT IMPORTE FROM TBL_FACTURAS
+    INTO :VIMPORTE DO BEGIN 
+    
+        IF (VIMPORTE <= 100.00) THEN
+            FAC100 = FAC100 + 1;
+            
+        IF ((100.00 < VIMPORTE) AND (VIMPORTE <= 1000.00)) THEN
+            FAC1000 = FAC1000 + 1;
+            
+        IF ((1000.00 < VIMPORTE) AND (VIMPORTE <= 10000.00)) THEN
+            FAC10000 = FAC10000 + 1;
+            
+        IF ((10000.00 < VIMPORTE) AND (VIMPORTE <= 100000.00)) THEN
+            FAC100000 = FAC100000 + 1;
+        
+    END
+    
+    SUSPEND;
+  
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P6_PRO_SEL_OBTENER_FACTURAS
+RETURNS (
+    NUMERO TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    IMPORTE TYPE OF COLUMN TBL_FACTURAS.IMPORTE,
+    ESTADO TYPE OF COLUMN TBL_FACTURAS.ESTADO,
+    FECHA TYPE OF COLUMN TBL_FACTURAS.FECHA )
+
+
+AS
+DECLARE VARIABLE VROW_COUNT INTEGER;
+    DECLARE VARIABLE VLAST_NUMERO TYPE OF COLUMN TBL_PRODUCTOS.ID;
+    DECLARE VARIABLE VID TYPE OF COLUMN TBL_PRODUCTOS.ID;
+BEGIN
+
+    FOR SELECT F.NUMERO, F.IMPORTE, F.ESTADO, F.FECHA, F.ID 
+    FROM PRO_SEL_PRODUCTOS_FACTURAS F
+    INTO :NUMERO, :IMPORTE, :ESTADO, :FECHA, :VID DO BEGIN 
+    
+        IF ((:VLAST_NUMERO IS NULL) 
+            OR 
+            (:VLAST_NUMERO <> :NUMERO)) THEN BEGIN
+            :VLAST_NUMERO = :NUMERO;
+            :VROW_COUNT = 1;
+        END 
+            
+        IF ((:VROW_COUNT = 2) 
+            AND 
+           ((SELECT STOCK FROM TBL_PRODUCTOS 
+             WHERE ID = :VID) < 1000)) THEN BEGIN 
+            SUSPEND;
+            :VROW_COUNT = 1;
+        END ELSE :VROW_COUNT = :VROW_COUNT + 1;
+        
+    END
+
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE P7_PRO_SEL_CANTIDAD_FACTURAS (
+    ANIO_SELECCIONADO integer )
+RETURNS (
+    MES01 integer,
+    MES02 integer,
+    MES03 integer,
+    MES04 integer,
+    MES05 integer,
+    MES06 integer,
+    MES07 integer,
+    MES08 integer,
+    MES09 integer,
+    MES10 integer,
+    MES11 integer,
+    MES12 integer )
+
+
+AS
+DECLARE VARIABLE VFECHA TYPE OF COLUMN TBL_FACTURAS.FECHA; 
+    DECLARE VARIABLE VMES_FACTURA SMALLINT; 
+BEGIN
+
+    IF ((:ANIO_SELECCIONADO < 1900) 
+        OR 
+        (:ANIO_SELECCIONADO > EXTRACT(YEAR FROM CURRENT_DATE))) THEN
+        EXCEPTION EX_ERROR_VALORES_INGRESADOS;
+
+    MES01 = 0;
+    MES02 = 0;
+    MES03 = 0;
+    MES04 = 0;
+    MES05 = 0;
+    MES06 = 0;
+    MES07 = 0;
+    MES08 = 0;
+    MES09 = 0;
+    MES10 = 0;
+    MES11 = 0;
+    MES12 = 0;
+  
+    FOR SELECT FECHA FROM TBL_FACTURAS
+    WHERE EXTRACT(YEAR FROM FECHA) = :ANIO_SELECCIONADO INTO :VFECHA DO BEGIN
+        VMES_FACTURA = EXTRACT(MONTH FROM VFECHA);
+        
+        IF (VMES_FACTURA = 1) THEN      
+            MES01 = MES01 + 1;
+         ELSE   
+            
+        IF (VMES_FACTURA = 2) THEN      
+            MES02 = MES02 + 1;
+        ELSE 
+            
+        IF (VMES_FACTURA = 3) THEN      
+            MES03 = MES03 + 1;
+        ELSE 
+            
+        IF (VMES_FACTURA = 4) THEN      
+            MES04 = MES04 + 1;
+        ELSE  
+            
+        IF (VMES_FACTURA = 5) THEN      
+            MES05 = MES05 + 1;
+        ELSE   
+            
+        IF (VMES_FACTURA = 6) THEN      
+            MES06 = MES06 + 1;
+        ELSE  
+            
+        IF (VMES_FACTURA = 7) THEN      
+            MES07 = MES07 + 1;
+        ELSE   
+            
+        IF (VMES_FACTURA = 8) THEN      
+            MES08 = MES08 + 1;
+        ELSE 
+            
+        IF (VMES_FACTURA = 9) THEN      
+            MES09 = MES09 + 1;
+        ELSE 
+            
+        IF (VMES_FACTURA = 10) THEN      
+            MES10 = MES10 + 1;
+        ELSE 
+            
+        IF (VMES_FACTURA = 11) THEN      
+            MES11 = MES11 + 1;
+        ELSE 
+            
+        IF (VMES_FACTURA = 12) THEN      
+            MES12 = MES12 + 1;
+    END
+    
+    SUSPEND;
+
+END
+^
+SET TERM ; ^
+
+
+SET TERM ^ ;
+ALTER PROCEDURE PRO_SEL_PRODUCTOS_FACTURAS
+RETURNS (
+    NUMERO TYPE OF COLUMN TBL_FACTURAS.NUMERO,
+    IMPORTE TYPE OF COLUMN TBL_FACTURAS.IMPORTE,
+    ESTADO TYPE OF COLUMN TBL_FACTURAS.ESTADO,
+    FECHA TYPE OF COLUMN TBL_FACTURAS.FECHA,
+    ID TYPE OF COLUMN TBL_DETALLES.ID )
+
+
+AS
+BEGIN
+    
+    FOR SELECT F.NUMERO, F.IMPORTE, F.ESTADO, F.FECHA, D.ID  
+    FROM TBL_FACTURAS F INNER JOIN TBL_DETALLES D
+    ON F.NUMERO = D.NUMERO 
+    INTO :NUMERO, :IMPORTE, :ESTADO, :FECHA, :ID DO BEGIN 
+        SUSPEND;
+    END
+    
+END
+^
+SET TERM ; ^
+
+
+ALTER TABLE TBL_DETALLES ADD CONSTRAINT FK_DETALLES_FACTURAS
+  FOREIGN KEY (NUMERO) REFERENCES TBL_FACTURAS (NUMERO);
+ALTER TABLE TBL_DETALLES ADD CONSTRAINT FK_DETALLES_PRODUCTOS
+  FOREIGN KEY (ID) REFERENCES TBL_PRODUCTOS (ID);
+GRANT EXECUTE
+ ON PROCEDURE P1_PRO_EXEC_BORRAR_FACTURAS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE P2_PRO_EXEC_ABM_PRODUCTOS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE P2_PRO_SEL_OBTENER_IMPORTES TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE P3_PRO_EXEC_INSERT_FACTURAS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE P3_PRO_SEL_PRODUCTOS_FACTURAS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE P4_PRO_SEL_ULTIMAS_FACTURAS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE P5_PRO_SEL_RANGO_IMPORTE TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE P6_PRO_SEL_OBTENER_FACTURAS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE P7_PRO_SEL_CANTIDAD_FACTURAS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT EXECUTE
+ ON PROCEDURE PRO_SEL_PRODUCTOS_FACTURAS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, UPDATE
+ ON TBL_DETALLES TO  SYSDBA WITH GRANT OPTION;
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, UPDATE
+ ON TBL_FACTURAS TO  SYSDBA WITH GRANT OPTION;
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, UPDATE
+ ON TBL_FECHA_FACTURA TO  SYSDBA WITH GRANT OPTION;
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, UPDATE
+ ON TBL_PRODUCTOS TO  SYSDBA WITH GRANT OPTION;
+
