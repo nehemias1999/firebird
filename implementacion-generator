@@ -1,0 +1,62 @@
+
+/*
+ *
+ * Implementación del objeto Generator sobre tabla para generar ID's en forma automática.
+ *
+*/
+
+/********************* ROLES **********************/
+
+/********************* UDFS ***********************/
+
+/********************* FUNCTIONS ***********************/
+
+/****************** SEQUENCES ********************/
+
+CREATE SEQUENCE GEN_CODIGO_PRODUCTO ;
+/******************** DOMAINS *********************/
+
+/******************* PROCEDURES ******************/
+
+/******************* PACKAGES ******************/
+
+/******************** TABLES **********************/
+
+CREATE TABLE TBL_PRODUCTOS
+(
+  CODIGO integer NOT NULL,
+  DESCRIPCION varchar(100) NOT NULL,
+  STOCK integer DEFAULT 0 NOT NULL,
+  PRECIO numeric(10,2) DEFAULT 0 NOT NULL,
+  CONSTRAINT PK_PRODUCTOS PRIMARY KEY (CODIGO)
+);
+/********************* VIEWS **********************/
+
+/******************* EXCEPTIONS *******************/
+
+/******************** TRIGGERS ********************/
+
+SET TERM ^ ;
+CREATE TRIGGER TRG_BIPRODUCTOS FOR TBL_PRODUCTOS ACTIVE
+BEFORE insert POSITION 0
+
+AS 
+BEGIN 
+    
+    NEW.CODIGO = GEN_ID(GEN_CODIGO_PRODUCTO, 1);
+     
+END
+^
+SET TERM ; ^
+/******************** DB TRIGGERS ********************/
+
+/******************** DDL TRIGGERS ********************/
+
+
+ALTER TABLE TBL_PRODUCTOS ADD CONSTRAINT CHK_PRODUCTOS_PRECIO
+  CHECK (PRECIO >= 0);
+ALTER TABLE TBL_PRODUCTOS ADD CONSTRAINT CHK_PRODUCTOS_STOCK
+  CHECK (STOCK >= 0);
+GRANT DELETE, INSERT, REFERENCES, SELECT, UPDATE
+ ON TBL_PRODUCTOS TO  SYSDBA WITH GRANT OPTION;
+
